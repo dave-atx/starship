@@ -2,6 +2,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::{Context, Module, ModuleConfig};
 use crate::configs::claude_usage::ClaudeUsageConfig;
+use crate::context::RateLimitWindow;
 use crate::formatter::StringFormatter;
 use crate::utils::render_time;
 
@@ -16,9 +17,14 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
     let claude_data = context.claude_code_data.as_ref()?;
     let rate_limits = claude_data.rate_limits.as_ref()?;
 
-    let five_hour_pct = rate_limits.five_hour.used_percentage;
-    let seven_day_pct = rate_limits.seven_day.used_percentage;
-    let max_pct = five_hour_pct.max(seven_day_pct);
+    // Each window is reported independently, so either may be missing
+    let five_hour = rate_limits.five_hour.as_ref();
+    let seven_day = rate_limits.seven_day.as_ref();
+    let max_pct = five_hour
+        .into_iter()
+        .chain(seven_day)
+        .map(|w| w.used_percentage)
+        .reduce(f32::max)?;
 
     let display_style = config
         .display
@@ -41,17 +47,16 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
         .unwrap_or_default()
         .as_secs();
 
-    let five_hour_reset = render_time(
-        (rate_limits.five_hour.resets_at.saturating_sub(now_secs) as u128) * 1000,
-        false,
-    );
-    let seven_day_reset = render_time(
-        (rate_limits.seven_day.resets_at.saturating_sub(now_secs) as u128) * 1000,
-        false,
-    );
-
-    let five_hour_pct_str = format!("{:.0}", five_hour_pct);
-    let seven_day_pct_str = format!("{:.0}", seven_day_pct);
+    let pct =
+        |window: Option<&RateLimitWindow>| window.map(|w| Ok(format!("{:.0}", w.used_percentage)));
+    let reset = |window: Option<&RateLimitWindow>| {
+        window.map(|w| {
+            Ok(render_time(
+                u128::from(w.resets_at.saturating_sub(now_secs)) * 1000,
+                false,
+            ))
+        })
+    };
 
     let parsed = StringFormatter::new(config.format).and_then(|formatter| {
         formatter
@@ -60,10 +65,10 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
                 _ => None,
             })
             .map(|variable| match variable {
-                "five_hour_pct" => Some(Ok(five_hour_pct_str.as_str())),
-                "five_hour_reset" => Some(Ok(five_hour_reset.as_str())),
-                "seven_day_pct" => Some(Ok(seven_day_pct_str.as_str())),
-                "seven_day_reset" => Some(Ok(seven_day_reset.as_str())),
+                "five_hour_pct" => pct(five_hour),
+                "five_hour_reset" => reset(five_hour),
+                "seven_day_pct" => pct(seven_day),
+                "seven_day_reset" => reset(seven_day),
                 _ => None,
             })
             .parse(None, Some(context))
@@ -214,6 +219,20 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_missing_window_is_unset() {
+        let mut data = make_data(75.0, 10.0, u64::MAX, u64::MAX);
+        data.rate_limits.as_mut().unwrap().seven_day = None;
+        let actual = ModuleRenderer::new("claude_usage")
+            .config(toml::toml! {
+                [claude_usage]
+                format = "[$five_hour_pct%( $seven_day_pct%)]($style)"
+            })
+            .claude_code_data(data)
+            .collect();
+        assert_eq!(actual, Some(Color::Yellow.bold().paint("75%").to_string()));
+    }
+
     fn make_data(
         five_hour_pct: f32,
         seven_day_pct: f32,
@@ -245,14 +264,14 @@ mod tests {
             workspace: None,
             effort: None,
             rate_limits: Some(RateLimits {
-                five_hour: RateLimitWindow {
+                five_hour: Some(RateLimitWindow {
                     used_percentage: five_hour_pct,
                     resets_at: five_hour_resets_at,
-                },
-                seven_day: RateLimitWindow {
+                }),
+                seven_day: Some(RateLimitWindow {
                     used_percentage: seven_day_pct,
                     resets_at: seven_day_resets_at,
-                },
+                }),
             }),
         }
     }
