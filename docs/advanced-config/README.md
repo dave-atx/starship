@@ -376,7 +376,7 @@ The profile includes some specialized modules:
 - `claude_model`: Displays the current Claude model being used
 - `claude_context`: Shows context window usage with a visual gauge
 - `claude_cost`: Displays session cost and statistics
-- `claude_usage`: Shows 5-hour and 7-day rate limit usage
+- `claude_usage`: Shows 5-hour and 7-day subscription rate limit usage
 
 The default profile format is:
 
@@ -658,74 +658,79 @@ format = "[$symbol$cost ($duration)]($style) "
 
 ### Claude Usage
 
-The `claude_usage` module displays Claude Code's 5-hour and 7-day rate limit usage. The style automatically changes based on the highest window usage percentage.
+The `claude_usage` module displays how much of your Claude.ai subscription rate limits have been used, for both the 5-hour and the 7-day window. Like `claude_context`, it supports threshold-based styling.
+
+Claude Code only reports rate limits for Claude.ai subscriptions (Pro/Max), and only after the first API response of a session. Each window is reported separately, and each is matched against the `display` thresholds on its own usage, so one window can be hidden or styled differently from the other.
 
 #### Options
 
-| Option     | Default                                                                                                           | Description                         |
-| ---------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| `format`   | `'[($five_hour_pct% \(resets in $five_hour_reset\)  )($seven_day_pct% \(resets in $seven_day_reset\))]($style) '` | The format for the module.          |
-| `display`  | [see below](#display-2)                                                                                           | Threshold and style configurations. |
-| `disabled` | `false`                                                                                                           | Disables the `claude_usage` module. |
+| Option     | Default                                                                                                                                                            | Description                         |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------- |
+| `format`   | `'[$symbol]($style)([ 5h $five_hour_percentage( \($five_hour_reset\))]($five_hour_style))([ 7d $seven_day_percentage( \($seven_day_reset\))]($seven_day_style)) '` | The format for the module.          |
+| `symbol`   | `'⏳'`                                                                                                                                                             | The symbol shown before the usage.  |
+| `display`  | [see below](#display-2)                                                                                                                                            | Threshold and style configurations. |
+| `disabled` | `false`                                                                                                                                                            | Disables the `claude_usage` module. |
 
 ##### Display
 
-The `display` option is an array of objects that define usage percentage thresholds and styles. The module is hidden unless the highest window's percentage meets or exceeds a threshold with `hidden = false`. The style from the highest matching threshold is used.
+The `display` option is an array of objects that define thresholds and styles. Each window takes the style of the highest threshold at or below its own usage. A window matching a `hidden` entry is left out, just like a window Claude Code did not report, and the module disappears once neither window is left.
 
-| Option      | Default      | Description                                                      |
-| ----------- | ------------ | ---------------------------------------------------------------- |
-| `threshold` | `0.0`        | The minimum usage percentage (0–100) to match this configuration |
-| `style`     | `bold green` | The value of `style` if this display configuration is matched    |
-| `hidden`    | `false`      | Hide the module if this configuration is matched                 |
+| Option      | Default      | Description                                                         |
+| ----------- | ------------ | ------------------------------------------------------------------- |
+| `threshold` | `0.0`        | The minimum rate limit usage percentage to match this configuration |
+| `style`     | `bold green` | The style of a window matching this display configuration           |
+| `hidden`    | `false`      | Hide a window matching this display configuration.                  |
 
 **Default configuration:**
 
 ```toml
 [[claude_usage.display]]
-threshold = 0.0
+threshold = 0
 hidden = true
 
 [[claude_usage.display]]
-threshold = 70.0
+threshold = 70
 style = "bold yellow"
 
 [[claude_usage.display]]
-threshold = 90.0
+threshold = 90
 style = "bold red"
 ```
 
 #### Variables
 
-| Variable        | Example | Description                                           |
-| --------------- | ------- | ----------------------------------------------------- |
-| five_hour_pct   | `65`    | Percentage of 5-hour window used                      |
-| five_hour_reset | `1h23m` | Time until 5-hour window resets                       |
-| seven_day_pct   | `7`     | Percentage of 7-day window used                       |
-| seven_day_reset | `2d14h` | Time until 7-day window resets                        |
-| style\*         |         | Mirrors the style from the matching display threshold |
+| Variable             | Example    | Description                                              |
+| -------------------- | ---------- | -------------------------------------------------------- |
+| five_hour_percentage | `24%`      | Usage of the 5-hour window                               |
+| five_hour_reset      | `1h30m12s` | Time until the 5-hour window resets                      |
+| seven_day_percentage | `41%`      | Usage of the 7-day window                                |
+| seven_day_reset      | `2d1h5m0s` | Time until the 7-day window resets                       |
+| symbol               |            | Mirrors the value of option `symbol`                     |
+| five_hour_style\*    |            | The style matched by the 5-hour window                   |
+| seven_day_style\*    |            | The style matched by the 7-day window                    |
+| style\*              |            | The style matched by the busier of the two shown windows |
 
-\*: This variable can only be used as a part of a style string
+\*: These variables can only be used as a part of a style string
 
-#### Examples
+The variables of a window that was not reported or is hidden are unset, so wrap each window in an optional group to drop it from the output.
+
+#### Example
 
 ```toml
 # ~/.config/starship.toml
 
-# Show only the 5-hour window
-[claude_usage]
-format = "[$five_hour_pct% \(resets in $five_hour_reset\)]($style) "
-
-# Custom thresholds
+# Show both windows at any usage, not only once a limit gets close.
+# A `display` array replaces the default one, so list every threshold you want to keep.
 [[claude_usage.display]]
-threshold = 0.0
-hidden = true
+threshold = 0
+style = "bold green"
 
 [[claude_usage.display]]
-threshold = 50.0
+threshold = 70
 style = "bold yellow"
 
 [[claude_usage.display]]
-threshold = 85.0
+threshold = 90
 style = "bold red"
 ```
 
