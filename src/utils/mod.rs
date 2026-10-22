@@ -813,6 +813,18 @@ pub fn exec_timeout(cmd: &mut Command, time_limit: Duration) -> Option<CommandOu
     }
 }
 
+// Break a duration down into days/hours/minutes/seconds, plus the leftover milliseconds
+fn time_components(raw_millis: u128) -> ([(u128, &'static str); 4], u128) {
+    let (millis, raw_seconds) = (raw_millis % 1000, raw_millis / 1000);
+    let (seconds, raw_minutes) = (raw_seconds % 60, raw_seconds / 60);
+    let (minutes, raw_hours) = (raw_minutes % 60, raw_minutes / 60);
+    let (hours, days) = (raw_hours % 24, raw_hours / 24);
+    (
+        [(days, "d"), (hours, "h"), (minutes, "m"), (seconds, "s")],
+        millis,
+    )
+}
+
 // Render the time into a nice human-readable string
 pub fn render_time(raw_millis: u128, show_millis: bool) -> String {
     // Fast returns for zero cases to render something
@@ -822,11 +834,7 @@ pub fn render_time(raw_millis: u128, show_millis: bool) -> String {
         _ => (),
     }
 
-    // Calculate a simple breakdown into days/hours/minutes/seconds/milliseconds
-    let (millis, raw_seconds) = (raw_millis % 1000, raw_millis / 1000);
-    let (seconds, raw_minutes) = (raw_seconds % 60, raw_seconds / 60);
-    let (minutes, raw_hours) = (raw_minutes % 60, raw_minutes / 60);
-    let (hours, days) = (raw_hours % 24, raw_hours / 24);
+    let (components, millis) = time_components(raw_millis);
 
     // Calculate how long the string will be to allocate once in most cases
     let result_capacity = match raw_millis {
@@ -835,8 +843,6 @@ pub fn render_time(raw_millis: u128, show_millis: bool) -> String {
         3600..=86399 => 9,
         _ => 12,
     } + if show_millis { 5 } else { 0 };
-
-    let components = [(days, "d"), (hours, "h"), (minutes, "m"), (seconds, "s")];
 
     // Concat components ito result starting from the first non-zero one
     let result = components.iter().fold(
@@ -849,6 +855,24 @@ pub fn render_time(raw_millis: u128, show_millis: bool) -> String {
 
     if show_millis {
         result + &millis.to_string() + "ms"
+    } else {
+        result
+    }
+}
+
+// Render the time as its two most significant non-zero units (`2d3h`, `4h12m`, `45m`).
+// Seconds are only shown when the duration is under a minute.
+pub fn render_time_short(raw_millis: u128) -> String {
+    let (components, _) = time_components(raw_millis);
+    let under_a_minute = raw_millis < 60_000;
+    let result: String = components
+        .iter()
+        .filter(|(amount, suffix)| *amount != 0 && (under_a_minute || *suffix != "s"))
+        .take(2)
+        .map(|(amount, suffix)| format!("{amount}{suffix}"))
+        .collect();
+    if result.is_empty() {
+        "0s".into()
     } else {
         result
     }
@@ -989,6 +1013,14 @@ mod tests {
         assert_eq!(humanize_int(999_500_000), "1G");
         assert_eq!(humanize_int(999_499_999), "999M");
         assert_eq!(humanize_int(999_999_999), "1G");
+    }
+
+    #[test]
+    fn render_time_short_test() {
+        assert_eq!(render_time_short(45_000), "45s");
+        assert_eq!(render_time_short((4 * 3600 + 12 * 60 + 33) * 1000), "4h12m");
+        // A zero unit is skipped rather than ending the output early
+        assert_eq!(render_time_short((2 * 86400 + 30 * 60) * 1000), "2d30m");
     }
 
     #[test]

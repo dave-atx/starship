@@ -699,20 +699,20 @@ style = "bold red"
 
 #### Variables
 
-| Variable             | Example    | Description                                              |
-| -------------------- | ---------- | -------------------------------------------------------- |
-| five_hour_percentage | `24%`      | Usage of the 5-hour window                               |
-| five_hour_reset      | `1h30m12s` | Time until the 5-hour window resets                      |
-| seven_day_percentage | `41%`      | Usage of the 7-day window                                |
-| seven_day_reset      | `2d1h5m0s` | Time until the 7-day window resets                       |
-| symbol               |            | Mirrors the value of option `symbol`                     |
-| five_hour_style\*    |            | The style matched by the 5-hour window                   |
-| seven_day_style\*    |            | The style matched by the 7-day window                    |
-| style\*              |            | The style matched by the busier of the two shown windows |
+| Variable             | Example | Description                                              |
+| -------------------- | ------- | -------------------------------------------------------- |
+| five_hour_percentage | `24%`   | Usage of the 5-hour window                               |
+| five_hour_reset      | `1h30m` | Time until the 5-hour window resets                      |
+| seven_day_percentage | `41%`   | Usage of the 7-day window                                |
+| seven_day_reset      | `2d1h`  | Time until the 7-day window resets                       |
+| symbol               |         | Mirrors the value of option `symbol`                     |
+| five_hour_style\*    |         | The style matched by the 5-hour window                   |
+| seven_day_style\*    |         | The style matched by the 7-day window                    |
+| style\*              |         | The style matched by the busier of the two shown windows |
 
 \*: These variables can only be used as a part of a style string
 
-The variables of a window that was not reported or is hidden are unset, so wrap each window in an optional group to drop it from the output.
+The variables of a window that was not reported or is hidden are unset, so wrap each window in an optional group to drop it from the output. The reset variables are unset when the reset time is unknown or already past.
 
 #### Example
 

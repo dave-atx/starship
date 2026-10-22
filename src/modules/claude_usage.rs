@@ -6,7 +6,7 @@ use crate::configs::claude_context::ClaudeDisplayConfig;
 use crate::configs::claude_usage::ClaudeUsageConfig;
 use crate::context::RateLimitWindow;
 use crate::formatter::StringFormatter;
-use crate::utils::render_time;
+use crate::utils::render_time_short;
 
 /// Usage of a window, guarded against a payload reporting a percentage outside 0-100
 fn used(window: &RateLimitWindow) -> f32 {
@@ -65,13 +65,10 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
     let percentage = |window: Option<&RateLimitWindow>| {
         window.map(|w| Ok(format!("{}%", used(w).round() as u8)))
     };
+    // Unset when the reset time is unknown or already past
     let reset = |window: Option<&RateLimitWindow>| {
-        window.map(|w| {
-            Ok(render_time(
-                u128::from(w.resets_at.saturating_sub(now_secs)) * 1000,
-                false,
-            ))
-        })
+        let seconds = window?.resets_at.checked_sub(now_secs).filter(|s| *s > 0)?;
+        Some(Ok(render_time_short(u128::from(seconds) * 1000)))
     };
 
     let parsed = StringFormatter::new(config.format).and_then(|formatter| {
@@ -109,6 +106,8 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
 
 #[cfg(test)]
 mod tests {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
     use crate::context::{ClaudeCodeData, RateLimitWindow, RateLimits};
     use crate::test::ModuleRenderer;
     use nu_ansi_term::{AnsiStrings, Color};
@@ -187,6 +186,37 @@ mod tests {
         assert_eq!(
             render(make_data(window(20.0), window(94.5))),
             Some(format!("{} ", Color::Red.bold().paint("⏳ 7d 95%")))
+        );
+    }
+
+    #[test]
+    fn test_default_format_with_reset() {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        // 30s of slack before `4h12m` would tick down to `4h11m`
+        let data = make_data(
+            Some(RateLimitWindow {
+                used_percentage: 75.0,
+                resets_at: now + 4 * 3600 + 12 * 60 + 30,
+            }),
+            // An unknown reset time drops just the reset group
+            window(91.0),
+        );
+        let actual = ModuleRenderer::new("claude_usage")
+            .claude_code_data(data)
+            .collect();
+        assert_eq!(
+            actual,
+            Some(format!(
+                "{} ",
+                AnsiStrings(&[
+                    Color::Red.bold().paint("⏳"),
+                    Color::Yellow.bold().paint(" 5h 75% (4h12m)"),
+                    Color::Red.bold().paint(" 7d 91%"),
+                ])
+            ))
         );
     }
 
