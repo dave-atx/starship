@@ -78,9 +78,11 @@ starship_precmd() {
         STARSHIP_START_TIME=""
     fi
     PS1="$(::STARSHIP:: prompt "${ARGS[@]}")"
+    local nlns=${PS1//[!$'\n']}
     if [[ ${BLE_ATTACHED-} ]]; then
-        local nlns=${PS1//[!$'\n']}
         bleopt prompt_rps1="$nlns$(::STARSHIP:: prompt --right "${ARGS[@]}")"
+    elif [[ ${FLYLINE_VERSION-} ]]; then
+        RPS1="$nlns$(::STARSHIP:: prompt --right "${ARGS[@]}")"
     fi
     STARSHIP_PREEXEC_READY=true  # Signal that we can safely restart the timer
 }
@@ -105,7 +107,9 @@ else
         # In order to set STARSHIP_START_TIME use an arithmetic expansion that evaluates to 0
         # To avoid printing anything, use the return value in an ${var:offset:length} substring expansion
         # with offset and length evaluating to 0.
-        PS0='${STARSHIP_START_TIME:$((STARSHIP_START_TIME="$(starship_preexec_ps0)",STARSHIP_PREEXEC_READY=0,0)):0}'"${PS0-}"
+        if [[ "${PS0-}" != *"starship_preexec_ps0"* ]]; then
+            PS0='${STARSHIP_START_TIME:$((STARSHIP_START_TIME="$(starship_preexec_ps0)",STARSHIP_PREEXEC_READY=0,0)):0}'"${PS0-}"
+        fi
     else
         # We want to avoid destroying an existing DEBUG hook. If we detect one, create
         # a new function that runs both the existing function AND our function, then

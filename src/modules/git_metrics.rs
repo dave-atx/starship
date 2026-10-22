@@ -8,7 +8,6 @@ use regex::Regex;
 
 use super::Context;
 use crate::configs::git_status::GitStatusConfig;
-use crate::modules::git_status::uses_reftables;
 use crate::{
     config::ModuleConfig, configs::git_metrics::GitMetricsConfig, formatter::StringFormatter,
     formatter::string_formatter::StringFormatterError, module::Module,
@@ -26,19 +25,12 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
         return None;
     }
 
-    let repo = context.get_repo().ok()?;
+    let repo = context.get_git_repo().ok()?;
     let gix_repo = repo.open();
-    if gix_repo.is_bare() {
-        return None;
-    }
+    gix_repo.workdir()?;
     let status_module = context.new_module("git_status");
     let status_config = GitStatusConfig::try_load(status_module.config);
-    // TODO: remove this special case once `gitoxide` can handle sparse indices for tree-index comparisons.
-    let stats = if repo.fs_monitor_value_is_true
-        || status_config.use_git_executable
-        || uses_reftables(&repo.repo.to_thread_local())
-        || gix_repo.index_or_empty().ok()?.is_sparse()
-    {
+    let stats = if repo.use_git_executable(status_config.use_git_executable)? {
         let mut git_args = vec!["diff", "--shortstat"];
         if config.ignore_submodules {
             git_args.push("--ignore-submodules");
@@ -160,7 +152,7 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
                                 } => {
                                     if *copy {
                                         diff.added += count_lines(
-                                            location,
+                                            location.as_ref(),
                                             id.as_ref().into(),
                                             *entry_mode,
                                             tree_index_cache,
@@ -395,13 +387,11 @@ mod tests {
     use std::process::Stdio;
 
     use crate::modules::git_status::tests::make_sparse;
-    use crate::test::{FixtureProvider, ModuleRenderer, fixture_repo};
+    use crate::test::{
+        BARE_GIT_PROVIDERS, COMMON_GIT_PROVIDERS, FixtureProvider, ModuleRenderer,
+        config_git_repo_for_tests, fixture_repo,
+    };
     use nu_ansi_term::Color;
-
-    const NORMAL_AND_REFTABLES: [FixtureProvider; 2] =
-        [FixtureProvider::Git, FixtureProvider::GitReftable];
-    const BARE_AND_REFTABLE: [FixtureProvider; 2] =
-        [FixtureProvider::GitBare, FixtureProvider::GitBareReftable];
 
     #[test]
     fn shows_nothing_on_empty_dir() -> io::Result<()> {
@@ -417,8 +407,36 @@ mod tests {
     }
 
     #[test]
+    fn reduced_trust_falls_back_to_gix_for_metrics() -> io::Result<()> {
+        for use_git_executable in [false, true] {
+            let repo_dir = create_repo_with_commit(COMMON_GIT_PROVIDERS[0])?;
+            write_file(
+                repo_dir.path().join("the_file"),
+                "First Line\nSecond Line\nThird Line\nAdded line\n",
+            )?;
+
+            let actual = ModuleRenderer::new("git_metrics")
+                .config(toml::toml! {
+                    [git_metrics]
+                    disabled = false
+                    format = "+$added/-$deleted"
+                    only_nonzero_diffs = false
+                    [git_status]
+                    use_git_executable = use_git_executable
+                })
+                .path(repo_dir.path())
+                .git_trust(gix::sec::Trust::Reduced)
+                .collect();
+
+            assert_eq!(actual.as_deref(), Some("+1/-0"));
+            repo_dir.close()?;
+        }
+        Ok(())
+    }
+
+    #[test]
     fn shows_added_lines() -> io::Result<()> {
-        for mode in NORMAL_AND_REFTABLES {
+        for &mode in COMMON_GIT_PROVIDERS {
             let repo_dir = create_repo_with_commit(mode)?;
             let path = repo_dir.path();
 
@@ -429,7 +447,7 @@ mod tests {
 
             let actual = render_metrics(path);
 
-            let expected = Some(format!("{} ", Color::Green.bold().paint("+1"),));
+            let expected = Some(format!("{} ", Color::Green.bold().paint("+1")));
 
             assert_eq!(expected, actual);
             repo_dir.close()?;
@@ -439,7 +457,7 @@ mod tests {
 
     #[test]
     fn shows_staged_addition() -> io::Result<()> {
-        for mode in NORMAL_AND_REFTABLES {
+        for &mode in COMMON_GIT_PROVIDERS {
             let repo_dir = create_repo_with_commit(mode)?;
             let path = repo_dir.path();
 
@@ -448,7 +466,7 @@ mod tests {
 
             let actual = render_metrics(path);
 
-            let expected = if matches!(mode, FixtureProvider::GitReftable) {
+            let expected = if matches!(mode, FixtureProvider::Git { reftable: true, .. }) {
                 // TODO: detect staged changes as well - `git diff` using another `git diff --cached` call.
                 None
             } else {
@@ -463,7 +481,7 @@ mod tests {
 
     #[test]
     fn shows_staged_rename_modification() -> io::Result<()> {
-        for mode in NORMAL_AND_REFTABLES {
+        for &mode in COMMON_GIT_PROVIDERS {
             let repo_dir = create_repo_with_commit(mode)?;
             let path = repo_dir.path();
 
@@ -476,7 +494,7 @@ mod tests {
 
             let actual = render_metrics(path);
 
-            let expected = if matches!(mode, FixtureProvider::GitReftable) {
+            let expected = if matches!(mode, FixtureProvider::Git { reftable: true, .. }) {
                 // TODO: detect staged changes as well - `git diff` using another `git diff --cached` call.
                 None
             } else {
@@ -491,7 +509,7 @@ mod tests {
 
     #[test]
     fn shows_staged_addition_intended() -> io::Result<()> {
-        for mode in NORMAL_AND_REFTABLES {
+        for &mode in COMMON_GIT_PROVIDERS {
             let repo_dir = create_repo_with_commit(mode)?;
             let path = repo_dir.path();
 
@@ -500,7 +518,7 @@ mod tests {
 
             let actual = render_metrics(path);
 
-            let expected = Some(format!("{} ", Color::Green.bold().paint("+1"),));
+            let expected = Some(format!("{} ", Color::Green.bold().paint("+1")));
 
             assert_eq!(expected, actual);
             repo_dir.close()?;
@@ -510,7 +528,7 @@ mod tests {
 
     #[test]
     fn shows_staged_modification() -> io::Result<()> {
-        for mode in NORMAL_AND_REFTABLES {
+        for &mode in COMMON_GIT_PROVIDERS {
             let repo_dir = create_repo_with_commit(mode)?;
             let path = repo_dir.path();
 
@@ -519,7 +537,7 @@ mod tests {
 
             let actual = render_metrics(path);
 
-            let expected = if matches!(mode, FixtureProvider::GitReftable) {
+            let expected = if matches!(mode, FixtureProvider::Git { reftable: true, .. }) {
                 // TODO: detect staged changes as well - `git diff` using another `git diff --cached` call.
                 None
             } else {
@@ -538,7 +556,7 @@ mod tests {
 
     #[test]
     fn shows_deleted_lines() -> io::Result<()> {
-        for mode in NORMAL_AND_REFTABLES {
+        for &mode in COMMON_GIT_PROVIDERS {
             let repo_dir = create_repo_with_commit(mode)?;
             let path = repo_dir.path();
 
@@ -557,7 +575,7 @@ mod tests {
 
     #[test]
     fn shows_deleted_lines_of_entire_file() -> io::Result<()> {
-        for mode in NORMAL_AND_REFTABLES {
+        for &mode in COMMON_GIT_PROVIDERS {
             let repo_dir = create_repo_with_commit(mode)?;
             let path = repo_dir.path();
 
@@ -575,7 +593,7 @@ mod tests {
 
     #[test]
     fn shows_staged_deletion() -> io::Result<()> {
-        for mode in NORMAL_AND_REFTABLES {
+        for &mode in COMMON_GIT_PROVIDERS {
             let repo_dir = create_repo_with_commit(mode)?;
             let path = repo_dir.path();
 
@@ -583,7 +601,7 @@ mod tests {
 
             let actual = render_metrics(path);
 
-            let expected = if matches!(mode, FixtureProvider::GitReftable) {
+            let expected = if matches!(mode, FixtureProvider::Git { reftable: true, .. }) {
                 // TODO: detect staged changes as well - `git diff` using another `git diff --cached` call.
                 None
             } else {
@@ -598,7 +616,7 @@ mod tests {
 
     #[test]
     fn shows_all_changes() -> io::Result<()> {
-        for mode in NORMAL_AND_REFTABLES {
+        for &mode in COMMON_GIT_PROVIDERS {
             let repo_dir = create_repo_with_commit(mode)?;
             let path = repo_dir.path();
 
@@ -621,7 +639,7 @@ mod tests {
 
     #[test]
     fn shows_nothing_if_no_changes() -> io::Result<()> {
-        for mode in NORMAL_AND_REFTABLES {
+        for &mode in COMMON_GIT_PROVIDERS {
             let repo_dir = create_repo_with_commit(mode)?;
             let path = repo_dir.path();
 
@@ -636,7 +654,7 @@ mod tests {
 
     #[test]
     fn shows_nothing_on_untracked() -> io::Result<()> {
-        for mode in NORMAL_AND_REFTABLES {
+        for &mode in COMMON_GIT_PROVIDERS {
             let repo_dir = create_repo_with_commit(mode)?;
             let path = repo_dir.path();
             std::fs::write(path.join("untracked"), "a line")?;
@@ -652,7 +670,7 @@ mod tests {
 
     #[test]
     fn shows_nothing_if_no_changes_sparse() -> io::Result<()> {
-        for mode in NORMAL_AND_REFTABLES {
+        for &mode in COMMON_GIT_PROVIDERS {
             let repo_dir = create_repo_with_commit(mode)?;
             let path = repo_dir.path();
 
@@ -668,7 +686,7 @@ mod tests {
 
     #[test]
     fn shows_all_if_only_nonzero_diffs_is_false() -> io::Result<()> {
-        for mode in NORMAL_AND_REFTABLES {
+        for &mode in COMMON_GIT_PROVIDERS {
             let repo_dir = create_repo_with_commit(mode)?;
             let path = repo_dir.path();
 
@@ -686,7 +704,7 @@ mod tests {
                 .path(path)
                 .collect();
 
-            let expected = Some(format!("{} ", Color::Green.bold().paint("+1"),));
+            let expected = Some(format!("{} ", Color::Green.bold().paint("+1")));
 
             assert_eq!(expected, actual);
             repo_dir.close()?;
@@ -696,7 +714,7 @@ mod tests {
 
     #[test]
     fn doesnt_generate_git_metrics_for_bare_repo() -> io::Result<()> {
-        for mode in BARE_AND_REFTABLE {
+        for &mode in BARE_GIT_PROVIDERS {
             let repo_dir = fixture_repo(mode)?;
 
             let actual = render_metrics(repo_dir.path());
@@ -708,8 +726,36 @@ mod tests {
     }
 
     #[test]
+    fn does_generate_git_metrics_for_worktree_backed_by_bare_repo() -> io::Result<()> {
+        for &mode in BARE_GIT_PROVIDERS {
+            let repo_dir = fixture_repo(mode)?;
+            let worktree_dir = tempfile::tempdir()?;
+
+            create_command("git")?
+                .args(["worktree", "add"])
+                .arg(worktree_dir.path())
+                .args(["-b", "metrics-worktree"])
+                .current_dir(repo_dir.path())
+                .output()?;
+
+            let file_path = worktree_dir.path().join("readme.md");
+            let mut the_file = OpenOptions::new().append(true).open(&file_path)?;
+            writeln!(the_file, "Added line")?;
+            the_file.sync_all()?;
+
+            let actual = render_metrics(worktree_dir.path());
+            let expected = Some(format!("{} ", Color::Green.bold().paint("+1")));
+
+            assert_eq!(expected, actual);
+            worktree_dir.close()?;
+            repo_dir.close()?;
+        }
+        Ok(())
+    }
+
+    #[test]
     fn shows_all_changes_with_ignored_submodules() -> io::Result<()> {
-        for mode in NORMAL_AND_REFTABLES {
+        for &mode in COMMON_GIT_PROVIDERS {
             let repo_dir = create_repo_with_commit(mode)?;
             let path = repo_dir.path();
 
@@ -739,7 +785,7 @@ mod tests {
 
     #[test]
     fn works_if_git_executable_is_used() -> io::Result<()> {
-        for mode in NORMAL_AND_REFTABLES {
+        for &mode in COMMON_GIT_PROVIDERS {
             let repo_dir = create_repo_with_commit(mode)?;
             let path = repo_dir.path();
 
@@ -813,25 +859,17 @@ mod tests {
             ["init", "--quiet"]
                 .into_iter()
                 .chain(
-                    matches!(provider, FixtureProvider::GitReftable)
-                        .then(|| "--ref-format=reftable"),
+                    matches!(provider, FixtureProvider::Git { reftable: true, .. })
+                        .then_some("--ref-format=reftable"),
                 )
+                .chain(rand::random::<bool>().then_some("--object-format=sha256"))
                 .chain(Some(path.to_str().expect("Path was not UTF-8"))),
             None,
             true,
         )?;
 
-        // Set local author info
-        run_git_cmd(
-            ["config", "--local", "user.email", "starship@example.com"],
-            Some(path),
-            true,
-        )?;
-        run_git_cmd(
-            ["config", "--local", "user.name", "starship"],
-            Some(path),
-            true,
-        )?;
+        // Set local author and repo info
+        config_git_repo_for_tests(path)?;
 
         // Ensure on the expected branch.
         // If build environment has `init.defaultBranch` global set

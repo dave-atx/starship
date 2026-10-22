@@ -1,42 +1,18 @@
 <p align="center">
   <img
     width="400"
-    src="https://raw.githubusercontent.com/starship/starship/master/media/logo.png"
+    src="https://raw.githubusercontent.com/starship/starship/main/media/logo.png"
     alt="Starship – Cross-shell prompt"
   />
 </p>
 
 <p align="center">
-  <a href="https://github.com/starship/starship/actions"
-    ><img
-      src="https://img.shields.io/github/actions/workflow/status/starship/starship/workflow.yml?branch=master&label=workflow&style=flat-square"
-      alt="GitHub Actions workflow status"
-  /></a>
-  <a href="https://crates.io/crates/starship"
-    ><img
-      src="https://img.shields.io/crates/v/starship?style=flat-square"
-      alt="Crates.io version"
-  /></a>
-  <a href="https://repology.org/project/starship/versions"
-    ><img
-      src="https://img.shields.io/repology/repositories/starship?label=in%20repositories&style=flat-square"
-      alt="Packaging status"/></a
-  ><br />
-  <a href="https://discord.gg/starship"
-    ><img
-      src="https://img.shields.io/discord/567163873606500352?label=discord&logoColor=white&style=flat-square"
-      alt="Chat on Discord"
-  /></a>
-  <a href="https://twitter.com/StarshipPrompt"
-    ><img
-      src="https://img.shields.io/badge/twitter-@StarshipPrompt-1DA1F3?style=flat-square"
-      alt="Follow @StarshipPrompt on Twitter"
-  /></a>
-  <a href="https://stand-with-ukraine.pp.ua"
-    ><img
-      src="https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/badges/StandWithUkraineFlat.svg"
-      alt="Stand With Ukraine"
-  /></a>
+  <a href="https://github.com/starship/starship/actions"><img src="https://img.shields.io/github/actions/workflow/status/starship/starship/workflow.yml?branch=main&label=workflow&style=flat-square" alt="GitHub Actions workflow status" /></a>
+  <a href="https://crates.io/crates/starship"><img src="https://img.shields.io/crates/v/starship?style=flat-square" alt="Crates.io version" /></a>
+  <a href="https://repology.org/project/starship/versions"><img src="https://img.shields.io/repology/repositories/starship?label=in%20repositories&style=flat-square" alt="Packaging status" /></a><br />
+  <a href="https://discord.gg/starship"><img src="https://img.shields.io/discord/567163873606500352?label=discord&logoColor=white&style=flat-square" alt="Chat on Discord" /></a>
+  <a href="https://twitter.com/StarshipPrompt"><img src="https://img.shields.io/badge/twitter-@StarshipPrompt-1DA1F3?style=flat-square" alt="Follow @StarshipPrompt on Twitter" /></a>
+  <a href="https://stand-with-ukraine.pp.ua"><img src="https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/badges/StandWithUkraineFlat.svg" alt="Stand With Ukraine" /></a>
 </p>
 
 <p align="center">
@@ -48,114 +24,61 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/starship/starship/blob/master/README.md"
-    ><img
-      height="20"
-      src="https://raw.githubusercontent.com/starship/starship/master/media/flag-us.png"
-      alt="English"
-  /></a>
+  <a href="https://github.com/starship/starship/blob/main/README.md"><img height="20" src="https://raw.githubusercontent.com/starship/starship/main/media/flag-us.png" alt="English" /></a>
   &nbsp;
   <a
-    href="https://github.com/starship/starship/blob/master/docs/de-DE/guide/README.md"
-    ><img
-      height="20"
-      src="https://raw.githubusercontent.com/starship/starship/master/media/flag-de.png"
-      alt="Deutsch"
-  /></a>
+    href="https://github.com/starship/starship/blob/main/docs/de-DE/guide/README.md"
+  ><img height="20" src="https://raw.githubusercontent.com/starship/starship/main/media/flag-de.png" alt="Deutsch" /></a>
   &nbsp;
   <a
-    href="https://github.com/starship/starship/blob/master/docs/es-ES/guide/README.md"
-    ><img
-      height="20"
-      src="https://raw.githubusercontent.com/starship/starship/master/media/flag-es.png"
-      alt="Español"
-  /></a>
+    href="https://github.com/starship/starship/blob/main/docs/es-ES/guide/README.md"
+  ><img height="20" src="https://raw.githubusercontent.com/starship/starship/main/media/flag-es.png" alt="Español" /></a>
   &nbsp;
   <a
-    href="https://github.com/starship/starship/blob/master/docs/fr-FR/guide/README.md"
-    ><img
-      height="20"
-      src="https://raw.githubusercontent.com/starship/starship/master/media/flag-fr.png"
-      alt="Français"
-  /></a>
+    href="https://github.com/starship/starship/blob/main/docs/fr-FR/guide/README.md"
+  ><img height="20" src="https://raw.githubusercontent.com/starship/starship/main/media/flag-fr.png" alt="Français" /></a>
   &nbsp;
   <a
-    href="https://github.com/starship/starship/blob/master/docs/id-ID/guide/README.md"
-    ><img
-      height="20"
-      src="https://raw.githubusercontent.com/starship/starship/master/media/flag-id.png"
-      alt="Bahasa Indonesia"
-  /></a>
+    href="https://github.com/starship/starship/blob/main/docs/id-ID/guide/README.md"
+  ><img height="20" src="https://raw.githubusercontent.com/starship/starship/main/media/flag-id.png" alt="Bahasa Indonesia" /></a>
   &nbsp;
   <a
-    href="https://github.com/starship/starship/blob/master/docs/it-IT/guide/README.md"
-    ><img
-      height="20"
-      src="https://raw.githubusercontent.com/starship/starship/master/media/flag-it.png"
-      alt="Italiano"
-  /></a>
+    href="https://github.com/starship/starship/blob/main/docs/it-IT/guide/README.md"
+  ><img height="20" src="https://raw.githubusercontent.com/starship/starship/main/media/flag-it.png" alt="Italiano" /></a>
   &nbsp;
   <a
-    href="https://github.com/starship/starship/blob/master/docs/ja-JP/guide/README.md"
-    ><img
-      height="20"
-      src="https://raw.githubusercontent.com/starship/starship/master/media/flag-jp.png"
-      alt="日本語"
-  /></a>
+    href="https://github.com/starship/starship/blob/main/docs/ja-JP/guide/README.md"
+  ><img height="20" src="https://raw.githubusercontent.com/starship/starship/main/media/flag-jp.png" alt="日本語" /></a>
   &nbsp;
   <a
-    href="https://github.com/starship/starship/blob/master/docs/pt-BR/guide/README.md"
-    ><img
-      height="20"
-      src="https://raw.githubusercontent.com/starship/starship/master/media/flag-br.png"
-      alt="Português do Brasil"
-  /></a>
+    href="https://github.com/starship/starship/blob/main/docs/pt-BR/guide/README.md"
+  ><img height="20" src="https://raw.githubusercontent.com/starship/starship/main/media/flag-br.png" alt="Português do Brasil" /></a>
   &nbsp;
   <a
-    href="https://github.com/starship/starship/blob/master/docs/ru-RU/guide/README.md"
-    ><img
-      height="20"
-      src="https://raw.githubusercontent.com/starship/starship/master/media/flag-ru.png"
-      alt="Русский"
-  /></a>
+    href="https://github.com/starship/starship/blob/main/docs/ru-RU/guide/README.md"
+  ><img height="20" src="https://raw.githubusercontent.com/starship/starship/main/media/flag-ru.png" alt="Русский" /></a>
   &nbsp;
   <a
-    href="https://github.com/starship/starship/blob/master/docs/uk-UA/guide/README.md"
-    ><img
-      height="20"
-      src="https://raw.githubusercontent.com/starship/starship/master/media/flag-ua.png"
-      alt="Українська"
-  /></a>
+    href="https://github.com/starship/starship/blob/main/docs/uk-UA/guide/README.md"
+  ><img height="20" src="https://raw.githubusercontent.com/starship/starship/main/media/flag-ua.png" alt="Українська" /></a>
   &nbsp;
   <a
-    href="https://github.com/starship/starship/blob/master/docs/vi-VN/guide/README.md"
-    ><img
-      height="20"
-      src="https://raw.githubusercontent.com/starship/starship/master/media/flag-vn.png"
-      alt="Tiếng Việt"
-  /></a>
+    href="https://github.com/starship/starship/blob/main/docs/vi-VN/guide/README.md"
+  ><img height="20" src="https://raw.githubusercontent.com/starship/starship/main/media/flag-vn.png" alt="Tiếng Việt" /></a>
   &nbsp;
   <a
-    href="https://github.com/starship/starship/blob/master/docs/zh-CN/guide/README.md"
-    ><img
-      height="20"
-      src="https://raw.githubusercontent.com/starship/starship/master/media/flag-cn.png"
-      alt="简体中文"
-  /></a>
+    href="https://github.com/starship/starship/blob/main/docs/zh-CN/guide/README.md"
+  ><img height="20" src="https://raw.githubusercontent.com/starship/starship/main/media/flag-cn.png" alt="简体中文" /></a>
   &nbsp;
   <a
-    href="https://github.com/starship/starship/blob/master/docs/zh-TW/guide/README.md"
-    ><img
-      height="20"
-      src="https://raw.githubusercontent.com/starship/starship/master/media/flag-tw.png"
-      alt="繁體中文"
-  /></a>
+    href="https://github.com/starship/starship/blob/main/docs/zh-TW/guide/README.md"
+  ><img height="20" src="https://raw.githubusercontent.com/starship/starship/main/media/flag-tw.png" alt="繁體中文" /></a>
 </p>
 
 <h1></h1>
 
 <img
-  src="https://raw.githubusercontent.com/starship/starship/master/media/demo.gif"
+  src="https://raw.githubusercontent.com/starship/starship/main/media/demo.gif"
   alt="Starship with iTerm2 and the Snazzy theme"
   width="50%"
   align="right"
@@ -171,7 +94,7 @@
 - **Easy:** quick to install – start using it in minutes.
 
 <p align="center">
-<a href="https://starship.rs/config/"><strong>Explore the Starship docs&nbsp;&nbsp;▶</strong></a>
+  <a href="https://starship.rs/config/"><strong>Explore the Starship docs&nbsp;&nbsp;▶</strong></a>
 </p>
 
 <a name="🚀-installation"></a>
@@ -414,7 +337,7 @@ We are always looking for contributors of **all skill levels**! If you're lookin
 
 If you are fluent in a non-English language, we greatly appreciate any help keeping our docs translated and up-to-date in other languages. If you would like to help, translations can be contributed on the [Starship Crowdin](https://translate.starship.rs/).
 
-If you are interested in helping contribute to starship, please take a look at our [Contributing Guide](https://github.com/starship/starship/blob/master/CONTRIBUTING.md). Also, feel free to drop into our [Discord server](https://discord.gg/8Jzqu3T) and say hi. 👋
+If you are interested in helping contribute to starship, please take a look at our [Contributing Guide](https://github.com/starship/starship/blob/main/CONTRIBUTING.md). Also, feel free to drop into our [Discord server](https://discord.gg/8Jzqu3T) and say hi. 👋
 
 ## 💭 Inspired By
 
@@ -442,14 +365,18 @@ Code Signing Roles:
 This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it.
 
 <p align="center">
-    <br>
-    <img width="100" src="https://raw.githubusercontent.com/starship/starship/master/media/icon.png" alt="Starship rocket icon">
+  <br>
+  <img
+    width="100"
+    src="https://raw.githubusercontent.com/starship/starship/main/media/icon.png"
+    alt="Starship rocket icon"
+  >
 </p>
 
 ## 📝 License
 
 Copyright © 2019-present, [Starship Contributors](https://github.com/starship/starship/graphs/contributors).<br>
-This project is [ISC](https://github.com/starship/starship/blob/master/LICENSE) licensed.
+This project is [ISC](https://github.com/starship/starship/blob/main/LICENSE) licensed.
 
 [alpine linux packages]: https://pkgs.alpinelinux.org/packages?name=starship
 [arch linux extra]: https://archlinux.org/packages/extra/x86_64/starship
