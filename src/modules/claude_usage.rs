@@ -1,10 +1,28 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use jiff::{Timestamp, Zoned, fmt::strtime};
+
 use super::{Context, Module, ModuleConfig};
 use crate::configs::claude_usage::ClaudeUsageConfig;
 use crate::context::RateLimitWindow;
 use crate::formatter::StringFormatter;
 use crate::utils::render_time;
+
+/// Local wall-clock time of `resets_at`: `reset_time_format` when that is today,
+/// `reset_date_time_format` otherwise.
+fn reset_at(resets_at: u64, now: &Zoned, config: &ClaudeUsageConfig) -> Option<String> {
+    let reset = Timestamp::from_second(i64::try_from(resets_at).ok()?)
+        .ok()?
+        .to_zoned(now.time_zone().clone());
+    let format = if reset.date() == now.date() {
+        config.reset_time_format
+    } else {
+        config.reset_date_time_format
+    };
+    strtime::format(format, &reset)
+        .inspect_err(|e| log::warn!("Invalid reset time format `{format}` in `claude_usage`: {e}"))
+        .ok()
+}
 
 pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
     let mut module = context.new_module("claude_usage");
@@ -30,6 +48,7 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
                 format!("{:.0}%", pct),
                 render_time((w.resets_at - now_secs) as u128 * 1000, false),
                 pct,
+                w.resets_at,
             )
         })
     };
@@ -58,6 +77,14 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
 
     let display_style = display_style?;
 
+    let now = Zoned::now();
+    let five_hour_reset_at = five_hour
+        .as_ref()
+        .and_then(|w| reset_at(w.3, &now, &config));
+    let seven_day_reset_at = seven_day
+        .as_ref()
+        .and_then(|w| reset_at(w.3, &now, &config));
+
     let parsed = StringFormatter::new(config.format).and_then(|formatter| {
         formatter
             .map_style(|variable| match variable {
@@ -67,8 +94,10 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
             .map(|variable| match variable {
                 "five_hour_percentage" => five_hour.as_ref().map(|w| Ok(w.0.as_str())),
                 "five_hour_reset" => five_hour.as_ref().map(|w| Ok(w.1.as_str())),
+                "five_hour_reset_at" => five_hour_reset_at.as_deref().map(Ok),
                 "seven_day_percentage" => seven_day.as_ref().map(|w| Ok(w.0.as_str())),
                 "seven_day_reset" => seven_day.as_ref().map(|w| Ok(w.1.as_str())),
+                "seven_day_reset_at" => seven_day_reset_at.as_deref().map(Ok),
                 _ => None,
             })
             .parse(None, Some(context))
@@ -88,6 +117,8 @@ pub fn module<'a>(context: &'a Context) -> Option<Module<'a>> {
 #[cfg(test)]
 mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    use jiff::{Timestamp, Zoned};
 
     use crate::test::ModuleRenderer;
     use nu_ansi_term::Color;
@@ -293,6 +324,55 @@ mod tests {
         ))
         .expect("should render");
         assert!(out.contains("100%") && !out.contains("130"), "{out}");
+    }
+
+    #[test]
+    fn test_reset_at() {
+        let now = Zoned::now();
+        let at = |seconds: i64| {
+            let secs = now.timestamp().as_second() + seconds;
+            let zoned = Timestamp::from_second(secs)
+                .unwrap()
+                .to_zoned(now.time_zone().clone());
+            (secs as u64, zoned)
+        };
+        // A minute away is almost always still today, a week away never is
+        let (soon, soon_local) = at(60);
+        let (next_week, next_week_local) = at(7 * 86400);
+        let soon_format = if soon_local.date() == now.date() {
+            "%H:%M"
+        } else {
+            "%a %H:%M"
+        };
+        let actual = ModuleRenderer::new("claude_usage")
+            .config(toml::toml! {
+                [claude_usage]
+                format = "$five_hour_reset_at|$seven_day_reset_at"
+            })
+            .claude_code_data(make_data(75.0, 75.0, soon, next_week))
+            .collect();
+        assert_eq!(
+            actual,
+            Some(format!(
+                "{}|{}",
+                soon_local.strftime(soon_format),
+                next_week_local.strftime("%a %H:%M")
+            ))
+        );
+    }
+
+    #[test]
+    fn test_reset_at_unset_when_format_invalid() {
+        let actual = ModuleRenderer::new("claude_usage")
+            .config(toml::toml! {
+                [claude_usage]
+                format = "($five_hour_reset_at)|($seven_day_reset_at)"
+                reset_time_format = "%"
+                reset_date_time_format = "%"
+            })
+            .claude_code_data(make_data(75.0, 75.0, future(3600), future(7 * 86400)))
+            .collect();
+        assert_eq!(actual, Some("|".to_string()));
     }
 
     fn make_data(

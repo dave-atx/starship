@@ -11,6 +11,8 @@ use crate::configs::claude_context::ClaudeDisplayConfig;
 #[serde(default)]
 pub struct ClaudeUsageConfig<'a> {
     pub format: &'a str,
+    pub reset_time_format: &'a str,
+    pub reset_date_time_format: &'a str,
     #[serde(borrow)]
     pub display: Vec<ClaudeDisplayConfig<'a>>,
     pub disabled: bool,
@@ -20,6 +22,8 @@ impl Default for ClaudeUsageConfig<'_> {
     fn default() -> Self {
         Self {
             format: "[($five_hour_percentage \\(resets in $five_hour_reset\\)  )($seven_day_percentage \\(resets in $seven_day_reset\\))]($style) ",
+            reset_time_format: "%H:%M",
+            reset_date_time_format: "%a %H:%M",
             display: vec![
                 ClaudeDisplayConfig {
                     threshold: 0.0,
